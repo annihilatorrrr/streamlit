@@ -88,10 +88,6 @@ def _marshall(doc_string_proto: DocStringProto, obj: Any) -> None:
         doc_string_proto.module = "streamlit"
     elif module_name is not None:
         doc_string_proto.module = module_name
-    else:
-        # Leave doc_string_proto.module as an empty string (default value).
-        pass
-
     obj_type = type(obj)
     doc_string_proto.type = str(obj_type)
 

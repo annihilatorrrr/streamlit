@@ -175,8 +175,7 @@ class WStates(MutableMapping[str, Any]):
         # For this and many other methods, we can't simply delegate to the
         # states field, because we need to invoke `__getitem__` for any
         # values, to handle deserialization and unwrapping of values.
-        for key in self.states:
-            yield key
+        yield from self.states
 
     def keys(self) -> KeysView[str]:
         return KeysView(self.states)
@@ -397,8 +396,7 @@ class SessionState:
     @property
     def _reverse_key_wid_map(self) -> Dict[str, str]:
         """Return a mapping of widget_id : widget_key."""
-        wid_key_map = {v: k for k, v in self._key_id_mapping.items()}
-        return wid_key_map
+        return {v: k for k, v in self._key_id_mapping.items()}
 
     def _keys(self) -> Set[str]:
         """All keys active in Session State, with widget keys converted
@@ -459,14 +457,6 @@ class SessionState:
             except KeyError:
                 pass
 
-        # Typically, there won't be both a widget id and an associated state key in
-        # old state at the same time, so the order we check is arbitrary.
-        # The exception is if session state is set and then a later run has
-        # a widget created, so the widget id entry should be newer.
-        # The opposite case shouldn't happen, because setting the value of a widget
-        # through session state will result in the next widget state reflecting that
-        # value.
-        if widget_id is not None:
             try:
                 return self._old_state[widget_id]
             except KeyError:
@@ -507,7 +497,7 @@ class SessionState:
     def __delitem__(self, key: str) -> None:
         widget_id = self._get_widget_id(key)
 
-        if not (key in self or widget_id in self):
+        if key not in self and widget_id not in self:
             raise KeyError(_missing_key_error_message(key))
 
         if key in self._new_session_state:
@@ -565,8 +555,7 @@ class SessionState:
         """
         new_value = self._new_widget_state.get(widget_id)
         old_value = self._old_state.get(widget_id)
-        changed: bool = new_value != old_value
-        return changed
+        return new_value != old_value
 
     def on_script_finished(self, widget_ids_this_run: Set[str]) -> None:
         """Called by ScriptRunner after its script finishes running.
@@ -586,15 +575,13 @@ class SessionState:
         """Set all trigger values in our state dictionary to False."""
         for state_id in self._new_widget_state:
             metadata = self._new_widget_state.widget_metadata.get(state_id)
-            if metadata is not None:
-                if metadata.value_type == "trigger_value":
-                    self._new_widget_state[state_id] = Value(False)
+            if metadata is not None and metadata.value_type == "trigger_value":
+                self._new_widget_state[state_id] = Value(False)
 
         for state_id in self._old_state:
             metadata = self._new_widget_state.widget_metadata.get(state_id)
-            if metadata is not None:
-                if metadata.value_type == "trigger_value":
-                    self._old_state[state_id] = False
+            if metadata is not None and metadata.value_type == "trigger_value":
+                self._old_state[state_id] = False
 
     def _cull_nonexistent(self, widget_ids: Set[str]) -> None:
         self._new_widget_state.cull_nonexistent(widget_ids)

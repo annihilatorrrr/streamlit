@@ -187,25 +187,24 @@ class NumberInputMixin:
             raise StreamlitAPIException(
                 "Default value for number_input should be an int or a float."
             )
-        else:
-            if format is None:
-                format = "%d" if int_value else "%0.2f"
+        if format is None:
+            format = "%d" if int_value else "%0.2f"
 
-            # Warn user if they format an int type as a float or vice versa.
-            if format in ["%d", "%u", "%i"] and float_value:
-                import streamlit as st
+        # Warn user if they format an int type as a float or vice versa.
+        if format in ["%d", "%u", "%i"] and float_value:
+            import streamlit as st
 
-                st.warning(
-                    "Warning: NumberInput value below has type float,"
-                    f" but format {format} displays as integer."
-                )
-            elif format[-1] == "f" and int_value:
-                import streamlit as st
+            st.warning(
+                "Warning: NumberInput value below has type float,"
+                f" but format {format} displays as integer."
+            )
+        elif format[-1] == "f" and int_value:
+            import streamlit as st
 
-                st.warning(
-                    "Warning: NumberInput value below has type int so is"
-                    f" displayed as int despite format string {format}."
-                )
+            st.warning(
+                "Warning: NumberInput value below has type int so is"
+                f" displayed as int despite format string {format}."
+            )
 
         if step is None:
             step = 1 if int_value else 0.01
@@ -214,9 +213,9 @@ class NumberInputMixin:
             float(format % 2)
         except (TypeError, ValueError):
             raise StreamlitAPIException(
-                "Format string for st.number_input contains invalid characters: %s"
-                % format
+                f"Format string for st.number_input contains invalid characters: {format}"
             )
+
 
         # Ensure that the value matches arguments' types.
         all_ints = int_value and int_args

@@ -100,9 +100,7 @@ def _open_browser_with_command(command, url):
 
 def _maybe_tuple_to_list(item: Any) -> Any:
     """Convert a tuple to a list. Leave as is if it's not a tuple."""
-    if isinstance(item, tuple):
-        return list(item)
-    return item
+    return list(item) if isinstance(item, tuple) else item
 
 
 def repr_(cls) -> str:
@@ -130,12 +128,12 @@ def index_(iterable, x) -> int:
     for i, value in enumerate(iterable):
         # https://stackoverflow.com/questions/588004/is-floating-point-math-broken
         # https://github.com/streamlit/streamlit/issues/4663
-        if isinstance(value, np.float64) or isinstance(value, float):
+        if isinstance(value, (np.float64, float)):
             if abs(x - value) < FLOAT_EQUALITY_EPSILON:
                 return i
         elif x == value:
             return i
-    raise ValueError("{} is not in iterable".format(str(x)))
+    raise ValueError(f"{str(x)} is not in iterable")
 
 
 _Key = TypeVar("_Key", bound=str)

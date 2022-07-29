@@ -264,7 +264,7 @@ class LayoutsMixin:
                 "The input argument to st.tabs must contain atleast one tab label."
             )
 
-        if any(isinstance(tab, str) == False for tab in tabs):
+        if any(not isinstance(tab, str) for tab in tabs):
             raise StreamlitAPIException(
                 "The tabs input list to st.tabs is only allowed to contain strings."
             )

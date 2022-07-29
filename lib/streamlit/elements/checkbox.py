@@ -116,13 +116,11 @@ class CheckboxMixin:
     ) -> bool:
         key = to_key(key)
         check_callback_rules(self.dg, on_change)
-        check_session_state_rules(
-            default_value=None if value is False else value, key=key
-        )
+        check_session_state_rules(default_value=value or None, key=key)
 
         checkbox_proto = CheckboxProto()
         checkbox_proto.label = label
-        checkbox_proto.default = bool(value)
+        checkbox_proto.default = value
         checkbox_proto.form_id = current_form_id(self.dg)
         if help is not None:
             checkbox_proto.help = dedent(help)

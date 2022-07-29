@@ -126,7 +126,7 @@ def marshall(coordinates, image_list_proto, fig=None, clear_figure=True, **kwarg
     # the values in options with the ones from kwargs
     options = {a: kwargs.get(a, b) for a, b in options.items()}
     # Merge options back into kwargs.
-    kwargs.update(options)
+    kwargs |= options
 
     image = io.BytesIO()
     fig.savefig(image, **kwargs)

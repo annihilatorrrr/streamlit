@@ -154,7 +154,7 @@ class ConfigOption:
         )
         match = re.match(key_format, self.key)
         assert match, f'Key "{self.key}" has invalid format.'
-        self.section, self.name = match.group("section"), match.group("name")
+        self.section, self.name = match["section"], match["name"]
 
         self.description = description
 
@@ -170,7 +170,7 @@ class ConfigOption:
         if self.replaced_by:
             self.deprecated = True
             if deprecation_text is None:
-                deprecation_text = "Replaced by %s." % self.replaced_by
+                deprecation_text = f"Replaced by {self.replaced_by}."
 
         if self.deprecated:
             assert expiration_date, "expiration_date is required for deprecated items"
@@ -210,9 +210,7 @@ class ConfigOption:
     @property
     def value(self) -> Any:
         """Get the value of this config option."""
-        if self._get_val_func is None:
-            return None
-        return self._get_val_func()
+        return None if self._get_val_func is None else self._get_val_func()
 
     def set_value(self, value: Any, where_defined: Optional[str] = None) -> None:
         """Set the value of this option.
@@ -256,13 +254,12 @@ class ConfigOption:
                     )
                     % details
                 )
-            else:
-                from streamlit.logger import get_logger
+            from streamlit.logger import get_logger
 
-                LOGGER = get_logger(__name__)
-                LOGGER.warning(
-                    textwrap.dedent(
-                        """
+            LOGGER = get_logger(__name__)
+            LOGGER.warning(
+                textwrap.dedent(
+                    """
                     ════════════════════════════════════════════════
                     %(key)s IS DEPRECATED.
                     %(explanation)s
@@ -272,9 +269,9 @@ class ConfigOption:
                     Please update %(file)s.
                     ════════════════════════════════════════════════
                     """
-                    )
-                    % details
                 )
+                % details
+            )
 
     def is_expired(self) -> bool:
         """Returns true if expiration_date is in the past."""

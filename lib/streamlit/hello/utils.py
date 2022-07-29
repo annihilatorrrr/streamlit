@@ -19,8 +19,7 @@ import textwrap
 
 def show_code(demo):
     """Showing the code of the demo."""
-    show_code = st.sidebar.checkbox("Show code", True)
-    if show_code:
+    if show_code := st.sidebar.checkbox("Show code", True):
         # Showing the code of the demo.
         st.markdown("## Code")
         sourcelines, _ = inspect.getsourcelines(demo)

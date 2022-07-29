@@ -127,7 +127,7 @@ class ImageMixin:
 
         if use_column_width == "auto" or (use_column_width is None and width is None):
             width = -3
-        elif use_column_width == "always" or use_column_width == True:
+        elif use_column_width in ["always", True]:
             width = -2
         elif width is None:
             width = -1
@@ -154,10 +154,7 @@ class ImageMixin:
 
 
 def _image_may_have_alpha_channel(image: PILImage) -> bool:
-    if image.mode in ("RGBA", "LA", "P"):
-        return True
-    else:
-        return False
+    return image.mode in ("RGBA", "LA", "P")
 
 
 def _format_from_image_type(
@@ -165,7 +162,7 @@ def _format_from_image_type(
     output_format: str,
 ) -> Literal["JPEG", "PNG"]:
     output_format = output_format.upper()
-    if output_format == "JPEG" or output_format == "PNG":
+    if output_format in {"JPEG", "PNG"}:
         return cast(
             Literal["JPEG", "PNG"],
             output_format,
@@ -175,10 +172,7 @@ def _format_from_image_type(
     if output_format == "JPG":
         return "JPEG"
 
-    if _image_may_have_alpha_channel(image):
-        return "PNG"
-
-    return "JPEG"
+    return "PNG" if _image_may_have_alpha_channel(image) else "JPEG"
 
 
 def _PIL_to_bytes(
@@ -213,7 +207,7 @@ def _np_array_to_bytes(
 
 
 def _4d_to_list_3d(array: "npt.NDArray[Any]") -> List["npt.NDArray[Any]"]:
-    return [array[i, :, :, :] for i in range(0, array.shape[0])]
+    return [array[i, :, :, :] for i in range(array.shape[0])]
 
 
 def _verify_np_shape(array: "npt.NDArray[Any]") -> "npt.NDArray[Any]":
@@ -242,12 +236,12 @@ def _normalize_to_bytes(
     format = _format_from_image_type(image, output_format)
     if output_format.lower() == "auto":
         ext = imghdr.what(None, data)
-        mimetype = mimetypes.guess_type("image.%s" % ext)[0]
+        mimetype = mimetypes.guess_type(f"image.{ext}")[0]
         # if no other options, attempt to convert
         if mimetype is None:
-            mimetype = "image/" + format.lower()
+            mimetype = f"image/{format.lower()}"
     else:
-        mimetype = "image/" + format.lower()
+        mimetype = f"image/{format.lower()}"
 
     if width < 0 and actual_width > MAXIMUM_CONTENT_WIDTH:
         width = MAXIMUM_CONTENT_WIDTH
@@ -256,7 +250,7 @@ def _normalize_to_bytes(
         new_height = int(1.0 * actual_height * width / actual_width)
         image = image.resize((width, new_height), resample=Image.BILINEAR)
         data = _PIL_to_bytes(image, format=format, quality=90)
-        mimetype = "image/" + format.lower()
+        mimetype = f"image/{format.lower()}"
 
     return data, mimetype
 
@@ -266,16 +260,13 @@ def _clip_image(image: "npt.NDArray[Any]", clamp: bool) -> "npt.NDArray[Any]":
     if issubclass(image.dtype.type, np.floating):
         if clamp:
             data = np.clip(image, 0, 1.0)
-        else:
-            if np.amin(image) < 0.0 or np.amax(image) > 1.0:
-                raise RuntimeError("Data is outside [0.0, 1.0] and clamp is not set.")
+        elif np.amin(image) < 0.0 or np.amax(image) > 1.0:
+            raise RuntimeError("Data is outside [0.0, 1.0] and clamp is not set.")
         data = data * 255
-    else:
-        if clamp:
-            data = np.clip(image, 0, 255)
-        else:
-            if np.amin(image) < 0 or np.amax(image) > 255:
-                raise RuntimeError("Data is outside [0, 255] and clamp is not set.")
+    elif clamp:
+        data = np.clip(image, 0, 255)
+    elif np.amin(image) < 0 or np.amax(image) > 255:
+        raise RuntimeError("Data is outside [0, 255] and clamp is not set.")
     return data
 
 
@@ -289,17 +280,13 @@ def image_to_url(
     allow_emoji: bool = False,
 ):
     # PIL Images
-    if isinstance(image, ImageFile.ImageFile) or isinstance(image, Image.Image):
+    if isinstance(image, (ImageFile.ImageFile, Image.Image)):
         format = _format_from_image_type(image, output_format)
         data = _PIL_to_bytes(image, format)
 
-    # BytesIO
-    # Note: This doesn't support SVG. We could convert to png (cairosvg.svg2png)
-    # or just decode BytesIO to string and handle that way.
     elif isinstance(image, io.BytesIO):
         data = _BytesIO_to_bytes(image)
 
-    # Numpy Arrays (ie opencv)
     elif isinstance(image, np.ndarray):
         image = _clip_image(
             _verify_np_shape(image),
@@ -324,7 +311,6 @@ def image_to_url(
             output_format=output_format,
         )
 
-    # Strings
     elif isinstance(image, str):
         # If it's a url, then set the protobuf and continue
         try:
@@ -346,7 +332,6 @@ def image_to_url(
                 # Allow OS filesystem errors to raise
                 raise
 
-    # Assume input in bytes.
     else:
         data = image
 
@@ -378,18 +363,14 @@ def marshall_images(
 
     if type(caption) is list:
         captions: Sequence[Optional[str]] = caption
+    elif isinstance(caption, str):
+        captions = [caption]
+    elif isinstance(caption, np.ndarray) and len(caption.shape) == 1:
+        captions = caption.tolist()
+    elif caption is None:
+        captions = [None] * len(images)
     else:
-        if isinstance(caption, str):
-            captions = [caption]
-        # You can pass in a 1-D Numpy array as captions.
-        elif isinstance(caption, np.ndarray) and len(caption.shape) == 1:
-            captions = caption.tolist()
-        # If there are no captions then make the captions list the same size
-        # as the images list.
-        elif caption is None:
-            captions = [None] * len(images)
-        else:
-            captions = [str(caption)]
+        captions = [str(caption)]
 
     assert type(captions) == list, "If image is a list then caption should be as well"
     assert len(captions) == len(images), "Cannot pair %d captions with %d images." % (
@@ -404,10 +385,6 @@ def marshall_images(
         if caption is not None:
             proto_img.caption = str(caption)
 
-        # We use the index of the image in the input image list to identify this image inside
-        # InMemoryFileManager. For this, we just add the index to the image's "coordinates".
-        image_id = "%s-%i" % (coordinates, coord_suffix)
-
         is_svg = False
         if isinstance(image, str):
             # Unpack local SVG image file to an SVG string
@@ -420,6 +397,10 @@ def marshall_images(
                 proto_img.markup = f"data:image/svg+xml,{image}"
                 is_svg = True
         if not is_svg:
+            # We use the index of the image in the input image list to identify this image inside
+            # InMemoryFileManager. For this, we just add the index to the image's "coordinates".
+            image_id = "%s-%i" % (coordinates, coord_suffix)
+
             proto_img.url = image_to_url(
                 image, width, clamp, channels, output_format, image_id
             )

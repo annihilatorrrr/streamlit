@@ -171,7 +171,7 @@ def get_fqn(the_type: type) -> str:
     """Get module.type_name for a given type."""
     module = the_type.__module__
     name = the_type.__qualname__
-    return "%s.%s" % (module, name)
+    return f"{module}.{name}"
 
 
 def get_fqn_type(obj: object) -> str:
@@ -309,9 +309,7 @@ def _is_plotly_obj(obj: object) -> bool:
 def _is_list_of_plotly_objs(obj: object) -> TypeGuard[list[Any]]:
     if not isinstance(obj, list):
         return False
-    if len(obj) == 0:
-        return False
-    return all(_is_plotly_obj(item) for item in obj)
+    return False if len(obj) == 0 else all(_is_plotly_obj(item) for item in obj)
 
 
 def _is_probably_plotly_dict(obj: object) -> TypeGuard[dict[str, Any]]:
@@ -327,10 +325,7 @@ def _is_probably_plotly_dict(obj: object) -> TypeGuard[dict[str, Any]]:
     if any(_is_plotly_obj(v) for v in obj.values()):
         return True
 
-    if any(_is_list_of_plotly_objs(v) for v in obj.values()):
-        return True
-
-    return False
+    return any((_is_list_of_plotly_objs(v) for v in obj.values()))
 
 
 def is_function(x: object) -> TypeGuard[types.FunctionType]:
@@ -344,9 +339,11 @@ def is_namedtuple(x: object) -> TypeGuard[NamedTuple]:
     if len(b) != 1 or b[0] != tuple:
         return False
     f = getattr(t, "_fields", None)
-    if not isinstance(f, tuple):
-        return False
-    return all(type(n).__name__ == "str" for n in f)
+    return (
+        all(type(n).__name__ == "str" for n in f)
+        if isinstance(f, tuple)
+        else False
+    )
 
 
 def is_pandas_styler(obj: object) -> TypeGuard[Styler]:
@@ -472,10 +469,7 @@ def ensure_indexable(obj: OptionSequence) -> Sequence[Any]:
     # This is an imperfect check because there is no guarantee that an `index`
     # function actually does the thing we want.
     index_fn = getattr(it, "index", None)
-    if callable(index_fn):
-        return it  # type: ignore
-    else:
-        return list(it)
+    return it if callable(index_fn) else list(it)
 
 
 def is_pandas_version_less_than(v: str) -> bool:
@@ -579,7 +573,4 @@ def to_key(key: Key) -> str:
 
 
 def to_key(key: Optional[Key]) -> Optional[str]:
-    if key is None:
-        return None
-    else:
-        return str(key)
+    return None if key is None else str(key)

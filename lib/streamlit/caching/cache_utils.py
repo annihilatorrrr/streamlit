@@ -173,9 +173,10 @@ def replay_result_messages(
     from streamlit.delta_generator import DeltaGenerator
 
     # Maps originally recorded dg ids to this script run's version of that dg
-    returned_dgs: Dict[str, DeltaGenerator] = {}
-    returned_dgs[result.main_id] = st._main
-    returned_dgs[result.sidebar_id] = st.sidebar
+    returned_dgs: Dict[str, DeltaGenerator] = {
+        result.main_id: st._main,
+        result.sidebar_id: st.sidebar,
+    }
 
     try:
         for msg in result.messages:
@@ -211,7 +212,7 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
 
         name = func.__qualname__
 
-        if len(args) == 0 and len(kwargs) == 0:
+        if not args and not kwargs:
             message = f"Running `{name}()`."
         else:
             message = f"Running `{name}(...)`."
@@ -256,6 +257,10 @@ def create_cache_wrapper(cached_func: CachedFunction) -> Callable[..., Any]:
         """Clear the wrapped function's associated cache."""
         cache = cached_func.get_function_cache(function_key)
         cache.clear()
+
+    # Mypy doesn't support declaring attributes of function objects,
+    # so we have to suppress a warning here. We can remove this suppression
+    # when this issue is resolved: https://github.com/python/mypy/issues/2087
 
     # Mypy doesn't support declaring attributes of function objects,
     # so we have to suppress a warning here. We can remove this suppression
@@ -467,12 +472,7 @@ def _make_value_key(
         arg_name = _get_positional_arg_name(func, arg_idx)
         arg_pairs.append((arg_name, args[arg_idx]))
 
-    for kw_name, kw_val in kwargs.items():
-        # **kwargs ordering is preserved, per PEP 468
-        # https://www.python.org/dev/peps/pep-0468/, so this iteration is
-        # deterministic.
-        arg_pairs.append((kw_name, kw_val))
-
+    arg_pairs.extend((kw_name, kw_val) for kw_name, kw_val in kwargs.items())
     # Create the hash from each arg value, except for those args whose name
     # starts with "_". (Underscore-prefixed args are deliberately excluded from
     # hashing.)
@@ -533,8 +533,7 @@ def _make_function_key(cache_type: CacheType, func: types.FunctionType) -> str:
         cache_type=cache_type,
     )
 
-    cache_key = func_hasher.hexdigest()
-    return cache_key
+    return func_hasher.hexdigest()
 
 
 def _get_positional_arg_name(func: types.FunctionType, arg_index: int) -> Optional[str]:

@@ -85,11 +85,9 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
         except (KeyError, binascii.Error, json.decoder.JSONDecodeError):
             email = "test@localhost.com"
 
-        user_info: Dict[str, Optional[str]] = dict()
-        if is_public_cloud_app:
-            user_info["email"] = None
-        else:
-            user_info["email"] = email
+        user_info: Dict[str, Optional[str]] = {
+            "email": None if is_public_cloud_app else email
+        }
 
         self._session = self._server._create_app_session(self, user_info)
         return None
@@ -108,9 +106,7 @@ class BrowserWebSocketHandler(WebSocketHandler, SessionClient):
 
         (See the docstring in the parent class.)
         """
-        if config.get_option("server.enableWebsocketCompression"):
-            return {}
-        return None
+        return {} if config.get_option("server.enableWebsocketCompression") else None
 
     def on_message(self, payload: Union[str, bytes]) -> None:
         if not self._session:

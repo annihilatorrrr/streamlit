@@ -152,32 +152,37 @@ dft = pd.DataFrame(
             [random.choice([True, False, None]) for _ in range(n_rows)],
             dtype="boolean",
         ),
-        # "timedelta64":[np.timedelta64(i+1, 'h') for i in range(n_rows)],
         "datetime64": [
-            (np.datetime64("2022-03-11T17:13:00") - np.random.randint(400000, 1500000))
+            (
+                np.datetime64("2022-03-11T17:13:00")
+                - np.random.randint(400000, 1500000)
+            )
             for _ in range(n_rows)
         ],
         "datetime64 + TZ": [
-            (pd.to_datetime("2022-03-11 17:41:00-05:00")) for _ in range(n_rows)
+            (pd.to_datetime("2022-03-11 17:41:00-05:00"))
+            for _ in range(n_rows)
         ],
         "string_object": [
-            "".join(random.choice(chars) for i in range(random_int))
-            for j in range(n_rows)
+            "".join(random.choice(chars) for _ in range(random_int))
+            for _ in range(n_rows)
         ],
         "string_string": [
             "".join(random.choice(chars) for i in range(random_int))
-            for j in range(n_rows)
+            for _ in range(n_rows)
         ],
         "category": pd.Series(
-            list("".join(random.choice(ascii_lowercase) for i in range(n_rows)))
+            list(
+                "".join(random.choice(ascii_lowercase) for i in range(n_rows))
+            )
         ).astype("category"),
         "period[H]": [
             (pd.Period("2022-03-14 11:52:00", freq="H") + pd.offsets.Hour(i))
             for i in range(n_rows)
         ],
-        # "sparse": sparse_data # Sparse pandas data (column sparse) not supported
         "interval": [
-            pd.Interval(left=i, right=i + 1, closed="both") for i in range(n_rows)
+            pd.Interval(left=i, right=i + 1, closed="both")
+            for i in range(n_rows)
         ],
         "string_list": [
             [
@@ -188,6 +193,7 @@ dft = pd.DataFrame(
         ],
     }
 )
+
 
 # string_string initially had the 'object' dtype. this line convert it into 'string'
 dft = dft.astype({"string_string": "string"})
@@ -317,7 +323,7 @@ st._arrow_dataframe(
 st.header("Input Data: 1-d set")
 # Set does not have a stable order accross different Python version.
 # Therefore, we are only testing this with one item.
-st._arrow_dataframe({"apple", "apple"})
+st._arrow_dataframe({"apple"})
 
 st.header("Input Data: 2-d list")
 list_1 = [[1, 2, 3, 4, 5], [-1, -2, -3, -4, -5], [10, 20, 30, 40, 50], [6, 7, 8, 9, 10]]

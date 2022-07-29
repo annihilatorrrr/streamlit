@@ -55,7 +55,7 @@ def _parse_date_value(value: DateValue) -> Tuple[List[date], bool]:
     elif isinstance(value, date):
         parsed_dates = [value]
     elif isinstance(value, (list, tuple)):
-        if not len(value) in (0, 1, 2):
+        if len(value) not in {0, 1, 2}:
             raise StreamlitAPIException(
                 "DateInput value should either be an date/datetime or a list/tuple of "
                 "0 - 2 date/datetime values"
@@ -423,9 +423,9 @@ class TimeWidgetsMixin:
         date_input_proto.form_id = current_form_id(self.dg)
 
         def deserialize_date_input(
-            ui_value: Any,
-            widget_id: str = "",
-        ) -> DateWidgetReturn:
+                ui_value: Any,
+                widget_id: str = "",
+            ) -> DateWidgetReturn:
             return_value: Sequence[date]
             if ui_value is not None:
                 return_value = tuple(
@@ -434,9 +434,11 @@ class TimeWidgetsMixin:
             else:
                 return_value = parsed_values.value
 
-            if not parsed_values.is_range:
-                return return_value[0]
-            return cast(DateWidgetReturn, tuple(return_value))
+            return (
+                cast(DateWidgetReturn, tuple(return_value))
+                if parsed_values.is_range
+                else return_value[0]
+            )
 
         def serialize_date_input(v: DateWidgetReturn) -> List[str]:
             to_serialize = list(v) if isinstance(v, (list, tuple)) else [v]

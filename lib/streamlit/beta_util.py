@@ -48,7 +48,7 @@ def function_beta_warning(func, date):
         return result
 
     # Update the wrapped func's name & docstring so st.help does the right thing
-    wrapped_func.__name__ = "beta_" + func.__name__
+    wrapped_func.__name__ = f"beta_{func.__name__}"
     wrapped_func.__doc__ = func.__doc__
     return wrapped_func
 

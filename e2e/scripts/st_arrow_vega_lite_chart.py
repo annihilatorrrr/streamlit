@@ -41,7 +41,7 @@ spec_with_width = {
 }
 
 interactive_spec = {
-    "title": f"Interactive Bar Chart Example",
+    "title": "Interactive Bar Chart Example",
     "data": {
         "values": [
             {"a": "A", "b": 28},
@@ -59,11 +59,19 @@ interactive_spec = {
         {"name": "highlight", "select": {"type": "point", "on": "mouseover"}},
         {"name": "select", "select": "point"},
     ],
-    "mark": {"type": "bar", "fill": "#4C78A8", "stroke": "black", "cursor": "pointer"},
+    "mark": {
+        "type": "bar",
+        "fill": "#4C78A8",
+        "stroke": "black",
+        "cursor": "pointer",
+    },
     "encoding": {
         "x": {"field": "a", "type": "ordinal"},
         "y": {"field": "b", "type": "quantitative"},
-        "fillOpacity": {"condition": {"param": "select", "value": 1}, "value": 0.3},
+        "fillOpacity": {
+            "condition": {"param": "select", "value": 1},
+            "value": 0.3,
+        },
         "strokeWidth": {
             "condition": [
                 {"param": "select", "empty": False, "value": 2},
@@ -74,6 +82,7 @@ interactive_spec = {
     },
     "config": {"scale": {"bandPaddingInner": 0.2}},
 }
+
 
 st._arrow_vega_lite_chart(df, spec, use_container_width=True)
 st._arrow_vega_lite_chart(df, spec, use_container_width=True)

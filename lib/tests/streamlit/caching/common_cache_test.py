@@ -75,12 +75,11 @@ class CommonCacheTest(DeltaGeneratorTestCase):
     def get_text_delta_contents(self) -> List[str]:
 
         deltas = self.get_all_deltas_from_queue()
-        text = [
+        return [
             element.text.body
             for element in (delta.new_element for delta in deltas)
             if element.WhichOneof("type") == "text"
         ]
-        return text
 
     @parameterized.expand([("memo", memo), ("singleton", singleton)])
     def test_simple(self, _, cache_decorator):

@@ -176,27 +176,28 @@ class AppSession:
         It's an error to use a AppSession after it's been shut down.
 
         """
-        if self._state != AppSessionState.SHUTDOWN_REQUESTED:
-            LOGGER.debug("Shutting down (id=%s)", self.id)
-            # Clear any unused session files in upload file manager and media
-            # file manager
-            self._uploaded_file_mgr.remove_session_files(self.id)
-            in_memory_file_manager.clear_session_files(self.id)
-            in_memory_file_manager.del_expired_files()
+        if self._state == AppSessionState.SHUTDOWN_REQUESTED:
+            return
+        LOGGER.debug("Shutting down (id=%s)", self.id)
+        # Clear any unused session files in upload file manager and media
+        # file manager
+        self._uploaded_file_mgr.remove_session_files(self.id)
+        in_memory_file_manager.clear_session_files(self.id)
+        in_memory_file_manager.del_expired_files()
 
-            # Shut down the ScriptRunner, if one is active.
-            # self._state must not be set to SHUTDOWN_REQUESTED until
-            # after this is called.
-            if self._scriptrunner is not None:
-                self._scriptrunner.request_stop()
+        # Shut down the ScriptRunner, if one is active.
+        # self._state must not be set to SHUTDOWN_REQUESTED until
+        # after this is called.
+        if self._scriptrunner is not None:
+            self._scriptrunner.request_stop()
 
-            self._state = AppSessionState.SHUTDOWN_REQUESTED
-            self._local_sources_watcher.close()
-            if self._stop_config_listener is not None:
-                self._stop_config_listener()
-            if self._stop_pages_listener is not None:
-                self._stop_pages_listener()
-            secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
+        self._state = AppSessionState.SHUTDOWN_REQUESTED
+        self._local_sources_watcher.close()
+        if self._stop_config_listener is not None:
+            self._stop_config_listener()
+        if self._stop_pages_listener is not None:
+            self._stop_pages_listener()
+        secrets._file_change_listener.disconnect(self._on_secrets_file_changed)
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
@@ -303,12 +304,8 @@ class AppSession:
                 # immediately.
                 self._scriptrunner.request_stop()
                 self._scriptrunner = None
-            else:
-                # fastReruns is not enabled. Send our ScriptRunner a rerun
-                # request. If the request is accepted, we're done.
-                success = self._scriptrunner.request_rerun(rerun_data)
-                if success:
-                    return
+            elif success := self._scriptrunner.request_rerun(rerun_data):
+                return
 
         # If we are here, then either we have no ScriptRunner, or our
         # current ScriptRunner is shutting down and cannot handle a rerun
@@ -470,10 +467,10 @@ class AppSession:
                 self._create_new_session_message(page_script_hash)
             )
 
-        elif (
-            event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
-            or event == ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR
-        ):
+        elif event in [
+            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
+        ]:
 
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
                 self._state = AppSessionState.APP_NOT_RUNNING

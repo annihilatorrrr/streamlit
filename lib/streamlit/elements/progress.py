@@ -71,8 +71,9 @@ class ProgressMixin:
                 )
         else:
             raise StreamlitAPIException(
-                "Progress Value has invalid type: %s" % type(value).__name__
+                f"Progress Value has invalid type: {type(value).__name__}"
             )
+
 
         return self.dg._enqueue("progress", progress_proto)
 

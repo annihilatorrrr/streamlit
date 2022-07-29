@@ -154,7 +154,7 @@ class _HashStack:
     def pretty_print(self):
         def to_str(v):
             try:
-                return "Object of type %s: %s" % (type_util.get_fqn_type(v), str(v))
+                return f"Object of type {type_util.get_fqn_type(v)}: {str(v)}"
             except:
                 return "<Unable to convert item to string>"
 
@@ -267,10 +267,7 @@ class _Cells:
 
 
 def _get_context(func) -> Context:
-    varnames = {}
-    if inspect.ismethod(func):
-        varnames = {"self": func.__self__}
-
+    varnames = {"self": func.__self__} if inspect.ismethod(func) else {}
     return Context(globals=func.__globals__, cells=_Cells(), varnames=varnames)
 
 
@@ -299,13 +296,11 @@ def _key(obj: Optional[Any]) -> Any:
     if is_simple(obj):
         return obj
 
-    if isinstance(obj, tuple):
-        if all(map(is_simple, obj)):
-            return obj
+    if isinstance(obj, tuple) and all(map(is_simple, obj)):
+        return obj
 
-    if isinstance(obj, list):
-        if all(map(is_simple, obj)):
-            return ("__l", tuple(obj))
+    if isinstance(obj, list) and all(map(is_simple, obj)):
+        return ("__l", tuple(obj))
 
     if (
         type_util.is_type(obj, "pandas.core.frame.DataFrame")
@@ -353,9 +348,8 @@ class _CodeHasher:
         key = (tname, _key(obj))
 
         # Memoize if possible.
-        if key[1] is not NoResult:
-            if key in self._hashes:
-                return self._hashes[key]
+        if key[1] is not NoResult and key in self._hashes:
+            return self._hashes[key]
 
         # Break recursive cycles.
         if obj in hash_stacks.current:
@@ -402,9 +396,7 @@ class _CodeHasher:
             )
 
         filepath = os.path.abspath(filename)
-        file_is_blacklisted = _FOLDER_BLACK_LIST.is_blacklisted(filepath)
-        # Short circuiting for performance.
-        if file_is_blacklisted:
+        if file_is_blacklisted := _FOLDER_BLACK_LIST.is_blacklisted(filepath):
             return False
         return file_util.file_is_in_folder_glob(
             filepath, self._get_main_script_directory()
@@ -422,7 +414,7 @@ class _CodeHasher:
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
 
-        elif isinstance(obj, bytes) or isinstance(obj, bytearray):
+        elif isinstance(obj, (bytes, bytearray)):
             return obj
 
         elif type_util.get_fqn_type(obj) in self._hash_funcs:
@@ -516,10 +508,8 @@ class _CodeHasher:
             self.update(h, obj.getvalue())
             return h.digest()
 
-        elif hasattr(obj, "name") and (
-            isinstance(obj, io.IOBase)
-            # Handle temporary files used during testing
-            or isinstance(obj, tempfile._TemporaryFileWrapper)
+        elif hasattr(obj, "name") and isinstance(
+            obj, (io.IOBase, tempfile._TemporaryFileWrapper)
         ):
             # Hash files as name + last modification date + offset.
             # NB: we're using hasattr("name") to differentiate between
@@ -536,7 +526,7 @@ class _CodeHasher:
         elif isinstance(obj, Pattern):
             return self.to_bytes([obj.pattern, obj.flags])
 
-        elif isinstance(obj, io.StringIO) or isinstance(obj, io.BytesIO):
+        elif isinstance(obj, (io.StringIO, io.BytesIO)):
             # Hash in-memory StringIO/BytesIO by their full contents
             # and seek position.
             h = hashlib.new("md5")
@@ -625,7 +615,7 @@ class _CodeHasher:
             if obj.__module__.startswith("streamlit"):
                 # Ignore streamlit modules even if they are in the CWD
                 # (e.g. during development).
-                return self.to_bytes("%s.%s" % (obj.__module__, obj.__name__))
+                return self.to_bytes(f"{obj.__module__}.{obj.__name__}")
 
             h = hashlib.new("md5")
 
@@ -766,7 +756,7 @@ def get_referenced_objects(code, context: Context) -> List[Any]:
                 if tos is None:
                     refs.append(op.argval)
                 elif isinstance(tos, str):
-                    tos += "." + op.argval
+                    tos += f".{op.argval}"
                 else:
                     tos = getattr(tos, op.argval)
             elif op.opname == "DELETE_FAST" and tos:
@@ -854,7 +844,7 @@ class UserHashError(StreamlitAPIException):
         args = _get_error_message_args(orig_exc, cached_func)
 
         if hasattr(hash_func, "__name__"):
-            args["hash_func_name"] = "`%s()`" % hash_func.__name__
+            args["hash_func_name"] = f"`{hash_func.__name__}()`"
         else:
             args["hash_func_name"] = "a function"
 
@@ -981,7 +971,7 @@ def _get_error_message_args(orig_exc: BaseException, failed_obj: Any) -> Dict[st
 
     else:
         if hasattr(hash_source, "__name__"):
-            object_desc = "`%s()`" % hash_source.__name__
+            object_desc = f"`{hash_source.__name__}()`"
             object_desc_specific = object_desc
         else:
             object_desc = "a function"
@@ -1015,6 +1005,4 @@ def _get_failing_lines(code, lineno: int) -> List[str]:
 
     start = lineno - source_lineno
     end = min(start + 3, len(source_lines))
-    lines = source_lines[start:end]
-
-    return lines
+    return source_lines[start:end]

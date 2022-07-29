@@ -82,10 +82,7 @@ class SafeSessionState:
     def get_widget_states(self) -> List[WidgetStateProto]:
         """Return a list of serialized widget values for each widget with a value."""
         with self._lock:
-            if self._disconnected:
-                return []
-
-            return self._state.get_widget_states()
+            return [] if self._disconnected else self._state.get_widget_states()
 
     def is_new_state_value(self, user_key: str) -> bool:
         with self._lock:
@@ -98,10 +95,7 @@ class SafeSessionState:
     def filtered_state(self) -> Dict[str, Any]:
         """The combined session and widget state, excluding keyless widgets."""
         with self._lock:
-            if self._disconnected:
-                return {}
-
-            return self._state.filtered_state
+            return {} if self._disconnected else self._state.filtered_state
 
     def __getitem__(self, key: str) -> Any:
         with self._lock:

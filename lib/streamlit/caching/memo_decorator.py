@@ -394,14 +394,15 @@ class MemoCache(Cache):
     def get_stats(self) -> List[CacheStat]:
         stats: List[CacheStat] = []
         with self._mem_cache_lock:
-            for item_key, item_value in self._mem_cache.items():
-                stats.append(
-                    CacheStat(
-                        category_name="st_memo",
-                        cache_name=self.display_name,
-                        byte_length=len(item_value),
-                    )
+            stats.extend(
+                CacheStat(
+                    category_name="st_memo",
+                    cache_name=self.display_name,
+                    byte_length=len(item_value),
                 )
+                for item_key, item_value in self._mem_cache.items()
+            )
+
         return stats
 
     def read_result(self, key: str) -> CachedResult:
@@ -413,12 +414,11 @@ class MemoCache(Cache):
             pickled_entry = self._read_from_mem_cache(key)
 
         except CacheKeyNotFoundError as e:
-            if self.persist == "disk":
-                pickled_entry = self._read_from_disk_cache(key)
-                self._write_to_mem_cache(key, pickled_entry)
-            else:
+            if self.persist != "disk":
                 raise e
 
+            pickled_entry = self._read_from_disk_cache(key)
+            self._write_to_mem_cache(key, pickled_entry)
         try:
             entry = pickle.loads(pickled_entry)
             if not isinstance(entry, CachedResult):
@@ -495,7 +495,7 @@ class MemoCache(Cache):
             # Clean up file so we don't leave zero byte files.
             try:
                 os.remove(path)
-            except (FileNotFoundError, IOError, OSError):
+            except (IOError, OSError):
                 pass
             raise CacheError("Unable to write to cache") from e
 

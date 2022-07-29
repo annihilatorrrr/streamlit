@@ -172,7 +172,7 @@ def get_url(host_ip: str) -> str:
     base_path = config.get_option("server.baseUrlPath").strip("/")
 
     if base_path:
-        base_path = "/" + base_path
+        base_path = f"/{base_path}"
 
     host_ip = host_ip.strip("/")
 

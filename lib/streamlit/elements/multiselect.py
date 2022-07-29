@@ -273,9 +273,10 @@ class MultiSelectMixin:
             multiselect_proto.set_value = True
 
         self.dg._enqueue("multiselect", multiselect_proto)
-        if len(widget_state.value) != 0:
-            if isinstance(widget_state.value[0], Enum):
-                return [str(enum) for enum in widget_state.value]
+        if len(widget_state.value) != 0 and isinstance(
+            widget_state.value[0], Enum
+        ):
+            return [str(enum) for enum in widget_state.value]
         return widget_state.value
 
     @property

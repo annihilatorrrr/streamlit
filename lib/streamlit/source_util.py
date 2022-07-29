@@ -73,10 +73,7 @@ def page_sort_key(script_path: Path) -> Tuple[float, str]:
     [(number, label)] = matches
     label = label.lower()
 
-    if number == "":
-        return (float("inf"), label)
-
-    return (float(number), label)
+    return (float("inf"), label) if number == "" else (float(number), label)
 
 
 def page_name_and_icon(script_path: Path) -> Tuple[str, str]:
@@ -103,7 +100,7 @@ def page_name_and_icon(script_path: Path) -> Tuple[str, str]:
 
     extracted_icon = re.search(PAGE_ICON_REGEX, name)
     if extracted_icon is not None:
-        icon = str(extracted_icon.group(1))
+        icon = str(extracted_icon[1])
         name = re.sub(PAGE_ICON_REGEX, "", name)
     else:
         icon = ""

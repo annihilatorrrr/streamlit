@@ -44,8 +44,7 @@ class ServerTestCase(tornado.testing.AsyncHTTPTestCase):
             "/not/a/script.py",
             "test command line",
         )
-        app = self.server._create_app()
-        return app
+        return self.server._create_app()
 
     async def start_server_loop(self) -> None:
         """Starts the server's loop coroutine."""

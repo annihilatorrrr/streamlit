@@ -195,27 +195,26 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
             break  # It worked! So let's break out of the loop.
 
         except (OSError, socket.error) as e:
-            if e.errno == errno.EADDRINUSE:
-                if server_port_is_manually_set():
-                    LOGGER.error("Port %s is already in use", port)
-                    sys.exit(1)
-                else:
-                    LOGGER.debug(
-                        "Port %s already in use, trying to use the next one.", port
-                    )
-                    port += 1
-                    # Save port 3000 because it is used for the development
-                    # server in the front end.
-                    if port == 3000:
-                        port += 1
-
-                    config.set_option(
-                        "server.port", port, ConfigOption.STREAMLIT_DEFINITION
-                    )
-                    call_count += 1
-            else:
+            if e.errno != errno.EADDRINUSE:
                 raise
 
+            if server_port_is_manually_set():
+                LOGGER.error("Port %s is already in use", port)
+                sys.exit(1)
+            else:
+                LOGGER.debug(
+                    "Port %s already in use, trying to use the next one.", port
+                )
+                port += 1
+                # Save port 3000 because it is used for the development
+                # server in the front end.
+                if port == 3000:
+                    port += 1
+
+                config.set_option(
+                    "server.port", port, ConfigOption.STREAMLIT_DEFINITION
+                )
+                call_count += 1
     if call_count >= MAX_PORT_SEARCH_RETRIES:
         raise RetriesExceeded(
             f"Cannot start Streamlit server. Port {port} is already in use, and "
@@ -349,15 +348,20 @@ class Server:
             (
                 make_url_path_regex(base, "assets/(.*)"),
                 AssetsFileHandler,
-                {"path": "%s/" % file_util.get_assets_dir()},
+                {"path": f"{file_util.get_assets_dir()}/"},
             ),
-            (make_url_path_regex(base, "media/(.*)"), MediaFileHandler, {"path": ""}),
+            (
+                make_url_path_regex(base, "media/(.*)"),
+                MediaFileHandler,
+                {"path": ""},
+            ),
             (
                 make_url_path_regex(base, "component/(.*)"),
                 ComponentRequestHandler,
                 dict(registry=ComponentRegistry.instance()),
             ),
         ]
+
 
         if config.get_option("server.scriptHealthCheckEnabled"):
             routes.extend(
@@ -382,21 +386,23 @@ class Server:
                         make_url_path_regex(base, "(.*)"),
                         StaticFileHandler,
                         {
-                            "path": "%s/" % static_path,
+                            "path": f"{static_path}/",
                             "default_filename": "index.html",
-                            "get_pages": lambda: set(
-                                [
-                                    page_info["page_name"]
-                                    for page_info in source_util.get_pages(
-                                        self.main_script_path
-                                    ).values()
-                                ]
-                            ),
+                            "get_pages": lambda: {
+                                page_info["page_name"]
+                                for page_info in source_util.get_pages(
+                                    self.main_script_path
+                                ).values()
+                            },
                         },
                     ),
-                    (make_url_path_regex(base, trailing_slash=False), AddSlashHandler),
+                    (
+                        make_url_path_regex(base, trailing_slash=False),
+                        AddSlashHandler,
+                    ),
                 ]
             )
+
 
         return tornado.web.Application(
             routes,
@@ -408,7 +414,7 @@ class Server:
         )
 
     def _set_state(self, new_state: State) -> None:
-        LOGGER.debug("Server state: %s -> %s" % (self._state, new_state))
+        LOGGER.debug(f"Server state: {self._state} -> {new_state}")
         self._state = new_state
 
     @property
@@ -473,9 +479,7 @@ class Server:
         try:
             if self._state == State.INITIAL:
                 self._set_state(State.WAITING_FOR_FIRST_SESSION)
-            elif self._state == State.ONE_OR_MORE_SESSIONS_CONNECTED:
-                pass
-            else:
+            elif self._state != State.ONE_OR_MORE_SESSIONS_CONNECTED:
                 raise RuntimeError(f"Bad server state at start: {self._state}")
 
             # Store the eventloop we're running on so that we can schedule
@@ -489,7 +493,11 @@ class Server:
                 on_started(self)
 
             while not self._must_stop.is_set():
-                if self._state == State.WAITING_FOR_FIRST_SESSION:
+                if (
+                    self._state == State.WAITING_FOR_FIRST_SESSION
+                    or self._state != State.ONE_OR_MORE_SESSIONS_CONNECTED
+                    and self._state == State.NO_SESSIONS_CONNECTED
+                ):
                     await asyncio.wait(
                         [self._must_stop.wait(), self._has_connection.wait()],
                         return_when=asyncio.FIRST_COMPLETED,
@@ -513,12 +521,6 @@ class Server:
                             await asyncio.sleep(0)
                         await asyncio.sleep(0)
                     await asyncio.sleep(0.01)
-
-                elif self._state == State.NO_SESSIONS_CONNECTED:
-                    await asyncio.wait(
-                        [self._must_stop.wait(), self._has_connection.wait()],
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
 
                 else:
                     # Break out of the thread loop if we encounter any other state.

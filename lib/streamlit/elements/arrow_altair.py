@@ -341,10 +341,7 @@ def _is_date_column(df: pd.DataFrame, name: str) -> bool:
 
     """
     column = df[name]
-    if column.size == 0:
-        return False
-
-    return isinstance(column[0], date)
+    return False if column.size == 0 else isinstance(column[0], date)
 
 
 def _melt_data(
@@ -562,7 +559,7 @@ def marshall(
         """Altair data transformer that returns a fake named dataset with the
         object id."""
         datasets[id(data)] = data
-        return {"name": str(id(data))}
+        return {"name": id(data)}
 
     alt.data_transformers.register("id", id_transform)
 

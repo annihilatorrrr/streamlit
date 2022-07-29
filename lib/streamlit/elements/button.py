@@ -378,7 +378,6 @@ def marshall_file(
         string_data = data.read()
         data_as_bytes = string_data.encode()
         mimetype = mimetype or "text/plain"
-    # Assume bytes; try methods until we run out.
     elif isinstance(data, bytes):
         data_as_bytes = data
         mimetype = mimetype or "application/octet-stream"
@@ -395,7 +394,7 @@ def marshall_file(
         data_as_bytes = data.read() or b""
         mimetype = mimetype or "application/octet-stream"
     else:
-        raise RuntimeError("Invalid binary data format: %s" % type(data))
+        raise RuntimeError(f"Invalid binary data format: {type(data)}")
 
     this_file = in_memory_file_manager.add(
         data_as_bytes,
